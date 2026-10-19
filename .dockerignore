@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+secrets
+credentials
+**/*.pem
+**/*.key
+**/*.p12
+.venv
+__pycache__
+node_modules
+dist
+build
+coverage
+*.log
