@@ -13,7 +13,6 @@
       perSystem = { pkgs, ... }: {
         devShells.default = pkgs.mkShellNoCC {
           packages = with pkgs; [ python315 uv ruff just direnv ];
-          POELIS_DEV_SHELL = "1";
           UV_PYTHON = "${pkgs.python315}/bin/python3";
           UV_PYTHON_DOWNLOADS = "never";
           UV_LINK_MODE = "copy";

@@ -1,67 +1,82 @@
-# Poelis MCP
+# Poelis MCP — v0, staging only
 
-Self-hostable MCP service intended for Poelis to operate for its customers.
+Official Poelis SDK tools over **Streamable HTTP, not stdio**, using the official MCP SDK.
 
-**Bootstrap only:** typed Python package and development checks.
-No application tools, customer login, server entrypoint, container or deployment yet.
+## Getting started
 
-| Choice | Bootstrap |
+**uv 0.13.0 is enough** on Linux/macOS; it manages Python 3.15 and dependencies.
+**Nix + direnv are optional** and provide the pinned development environment.
+
+In [staging](https://staging.poelis.com), open **Settings → SDK Keys → Create SDK Key**.
+Copy your [personal SDK key](https://docs.poelis.com/python-sdk/sdk-keys); writes require Editor access.
+
+### Server
+
+From this repository, **without Nix**:
+
+```sh
+POELIS_SDK_KEY='YOUR_STAGING_SDK_KEY' uv run --locked python -m poelis_mcp start
+```
+
+**With Nix + direnv** (shell hook enabled): review `.envrc`, then run
+`direnv allow .` and wait for the environment to load.
+
+```sh
+POELIS_SDK_KEY='YOUR_STAGING_SDK_KEY' just start
+```
+
+Inline keys can enter shell history. Omit the variable for a hidden prompt.
+The server runs on loopback in the background for four hours. Poelis enforces your
+SDK key's permissions; clients use a **separate local MCP bearer token**.
+The SDK key stays server-side. This test issuer is not Poelis login.
+No global executable or client-specific profile is installed.
+
+`uv run --locked python -m poelis_mcp status` shows the URL and private token-file path.
+`uv run --locked python -m poelis_mcp stop` stops the session without changing Poelis data.
+
+### Agent (MCP client)
+
+Replace the repository path below, then paste into any compatible coding agent on the same machine:
+
+```text
+Connect this agent to the already-running Poelis staging MCP server.
+Run: uv run --locked --project /absolute/path/to/poelis-mcp python -m poelis_mcp status
+Use this client's documented Streamable HTTP configuration and the reported URL.
+Prefer user-level configuration so it works from other working directories.
+Preserve unrelated servers and agent settings; do not create a special profile.
+Load the private token file locally through a supported secret/header mechanism:
+Authorization: Bearer <token>. Never print the token, put it in chat or tracked
+files, or use the Poelis SDK key. If secure setup or user-level scope is unsupported,
+explain the limitation; do not invent configuration options.
+Reload if needed, discover tools, then list my workspaces and products. Read only.
+```
+
+After creating a new server session, repeat client setup: URL and token change.
+
+## Scope and limits
+
+17 tools through the Poelis SDK: **11 reads and 6 writes**.
+
+| Area | Operations |
 |---|---|
-| Environment | Nix + flake-parts; committed `flake.lock` |
-| Python | 3.15 from Nix; typed package |
-| MCP | Official Python SDK 2.3.0; Streamable HTTP target |
-| Validation | Pydantic 2.14.1; strict boundary validation |
-| Checks | mypy strict + Pydantic plugin, Ruff from Nix, pytest |
-| Dependencies | uv 0.13.0 from Nix; committed `uv.lock` |
-| Delivery | Alberto reviews and merges changes |
+| Workspaces | List, get, user-accessible resources |
+| Products | List, list versions, set baseline version |
+| Items | List drafts, get draft, list version snapshot |
+| Search | Products, items, properties |
+| Properties | Update numeric, matrix, text, date, status |
 
-## Development
+No creation, deletion, files, raw GraphQL or REST fallback.
+**Real writes affect existing accessible data.** Timeouts and cancellation do not
+guarantee rollback; automatic retries are disabled. Version-list pagination is local
+over bounded SDK responses.
 
-Prerequisite: Nix with `nix-command` and `flakes` enabled. No host Python, uv,
-Node.js or just installation needed. Linux x86_64/aarch64 and macOS Apple Silicon.
-The pinned nixpkgs branch no longer supports Intel macOS.
+SDKs: `mcp==2.3.0` and `poelis-sdk==1.3.1`.
+Tool contracts: [operations.py](src/poelis_mcp/operations.py) · [models.py](src/poelis_mcp/models.py).
 
-```sh
-nix develop --no-update-lock-file -c just check build
-```
+## Checks
 
-Or use direnv (review `.envrc` before allowing it):
+Tests: `uv run --locked pytest`. Build: `uv build --no-sources`.
+Optional **just** shortcuts: `just start` for the same server, `just check build` for full checks.
 
-```sh
-nix develop -c direnv allow .
-nix develop -c direnv exec . just check build
-# With direnv installed and its shell hook enabled: direnv allow, then just check build.
-```
-
-- Nix fixes the tools and Python interpreter; uv installs hash-locked dependencies,
-  including the build backend, before building without isolation.
-- Ruff comes from the locked nixpkgs (0.16.10), not a PyPI executable requiring a
-  conventional Linux loader. No global `nix-ld` configuration is needed.
-- `just` rejects execution outside the Nix environment. No global nix-direnv setup needed.
-- `just check`: lint, formatting, typing and tests.
-- Typing covers `src` and `tests`: strict mypy, all `disallow_any_*` checks,
-  additional optional diagnostics and the Pydantic plugin. `just typecheck` disables
-  incremental checking so unused configuration sections can be detected.
-- Regression tests exercise the pinned checker against unsafe snippets and a valid
-  typed control. Inferred concrete types are allowed; redundant annotations are not required.
-- Casts, targeted suppressions and `no_type_check` are not universally prohibited by
-  mypy: they require explicit review, not silent use to make checks pass.
-- `just build`: wheel and source distribution using the locked build backend.
-- CI runs the same Nix commands. `nix flake check` validates the shell; it does **not**
-  run pytest. Use the `just check` command above for the actual tests.
-- First setup requires network access to Nix caches and Python package artifacts;
-  this is a locked development environment, not a fully sandboxed Nix Python build.
-- Update `flake.lock` and `uv.lock` deliberately; keep uv's required version aligned.
-- Tests currently verify the toolchain, not Poelis integration or authentication.
-- No secrets needed for bootstrap checks. Never commit credentials.
-
-## Project notes
-
-- [Scope and ownership](docs/BRIEF.md)
-- [Technical findings and decisions](docs/decisions.md)
-- [Production acceptance](docs/ACCEPTANCE.md)
-- [Working rules](AGENTS.md)
-
-Coverage target: documented public APIs, including authorized deletion, not every
-web-app feature. Client compatibility and live API tests remain unverified.
-Ownership/license must be agreed before distribution; no open-source license assumed.
+Local protocol tests cover all tools, mutations and auth isolation with fixture upstreams.
+Live verification is read-only.

@@ -1,17 +1,13 @@
-# Run all checks by default.
+# Optional shortcuts; the application only needs uv.
 check: lint typecheck test
 
-[private]
-_environment:
-    @test "${POELIS_DEV_SHELL:-}" = 1 || { printf '%s\n' 'Use nix develop -c just <recipe>, or enable direnv.' >&2; exit 1; }
-
-setup: _environment
+setup:
     uv sync --locked --no-install-project
     uv sync --locked --no-build-isolation
 
 lint: setup
-    ruff check .
-    ruff format --check .
+    if command -v ruff >/dev/null 2>&1; then ruff check .; else uv tool run --from ruff==0.16.10 ruff check .; fi
+    if command -v ruff >/dev/null 2>&1; then ruff format --check .; else uv tool run --from ruff==0.16.10 ruff format --check .; fi
 
 typecheck: setup
     uv run --locked mypy --config-file pyproject.toml --no-incremental
@@ -21,3 +17,13 @@ test: setup
 
 build: setup
     uv build --python .venv/bin/python --no-sources --no-build-isolation
+
+# Background Streamable HTTP server; no client-specific dependency.
+start:
+    uv run --locked python -m poelis_mcp start
+
+stop:
+    uv run --locked python -m poelis_mcp stop
+
+status:
+    uv run --locked python -m poelis_mcp status

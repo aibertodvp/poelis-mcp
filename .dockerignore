@@ -1,4 +1,5 @@
 .git
+.omp/
 .env
 .env.*
 secrets
